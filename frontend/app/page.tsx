@@ -9,6 +9,7 @@ export default function Home() {
   const [logs, setLogs] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [reportUrl, setReportUrl] = useState(''); // New state for download link
+  const [wsStatus, setWsStatus] = useState('Connecting...'); // Connection status indicator
   const ws = useRef<WebSocket | null>(null);
 
   const [agents, setAgents] = useState({
@@ -21,26 +22,51 @@ export default function Home() {
   });
 
   useEffect(() => {
-    ws.current = new WebSocket('wss://autoaudit-ai-4qqg.onrender.com/ws/audit-logs');
-    
-    ws.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setLogs((prev) => [...prev, data]);
+    let reconnectTimeout: NodeJS.Timeout;
+
+    const connectWebSocket = () => {
+      setWsStatus('Connecting...');
+      ws.current = new WebSocket('wss://autoaudit-ai-4qqg.onrender.com/ws/audit-logs');
       
-      if (data.agent) {
-        setAgents((prev) => ({ ...prev, [data.agent]: data.status }));
-      }
-      
-      // Update when scan finishes
-      if (data.status === 'completed') {
-        setIsScanning(false);
-        if (data.report_id) {
-          setReportUrl(`https://autoaudit-ai-4qqg.onrender.com/download-report/${data.report_id}`);
+      ws.current.onopen = () => {
+        setWsStatus('Connected');
+      };
+
+      ws.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setLogs((prev) => [...prev, data]);
+        
+        if (data.agent) {
+          setAgents((prev) => ({ ...prev, [data.agent]: data.status }));
         }
-      }
+        
+        // Update when scan finishes
+        if (data.status === 'completed') {
+          setIsScanning(false);
+          if (data.report_id) {
+            setReportUrl(`https://autoaudit-ai-4qqg.onrender.com/download-report/${data.report_id}`);
+          }
+        }
+      };
+
+      ws.current.onerror = (error) => {
+        setWsStatus('Error/Reconnecting...');
+        console.log('WebSocket error:', error);
+      };
+
+      ws.current.onclose = () => {
+        setWsStatus('Disconnected. Reconnecting in 3s...');
+        // Auto-reconnect after 3 seconds if connection drops or backend was asleep
+        reconnectTimeout = setTimeout(() => {
+          connectWebSocket();
+        }, 3000);
+      };
     };
 
+    connectWebSocket();
+
     return () => {
+      clearTimeout(reconnectTimeout);
       if (ws.current) ws.current.close();
     };
   }, []);
@@ -54,6 +80,9 @@ export default function Home() {
     
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ action: "START_SCAN", url: url }));
+    } else {
+      alert('WebSocket connection is not active yet. Please wait a moment or refresh.');
+      setIsScanning(false);
     }
   };
 
@@ -75,7 +104,12 @@ export default function Home() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent flex items-center gap-3">
             <Shield className="text-blue-500" /> AutoAudit AI Pro
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">Autonomous Multi-Agent Vulnerability & UI Scanner</p>
+          <p className="text-zinc-400 text-sm mt-1">
+            Autonomous Multi-Agent Vulnerability & UI Scanner 
+            <span className={`ml-3 text-xs px-2 py-0.5 rounded-full ${wsStatus === 'Connected' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
+              ● {wsStatus}
+            </span>
+          </p>
         </div>
 
         <div className="flex w-full md:w-auto gap-3">
@@ -147,9 +181,12 @@ export default function Home() {
         </div>
 
         <div className="bg-black border border-zinc-800 rounded-xl p-0 flex flex-col h-[500px] overflow-hidden shadow-2xl">
-          <div className="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
-            <Terminal size={18} className="text-zinc-400" />
-            <span className="text-sm font-mono text-zinc-400">live-agent-logs.sh</span>
+          <div className="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Terminal size={18} className="text-zinc-400" />
+              <span className="text-sm font-mono text-zinc-400">live-agent-logs.sh</span>
+            </div>
+            <span className="text-xs font-mono text-zinc-500">{wsStatus}</span>
           </div>
           
           <div className="p-4 overflow-y-auto flex-1 font-mono text-sm space-y-2 flex flex-col-reverse">
