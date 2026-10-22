@@ -25,10 +25,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# --- CORS Fixed Here ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # <-- FIXED: True se False kar diya gaya hai
     allow_methods=["*"],
     allow_headers=["*"],
 )
