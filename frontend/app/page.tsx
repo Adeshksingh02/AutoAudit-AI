@@ -26,7 +26,7 @@ export default function Home() {
 
     const connectWebSocket = () => {
       setWsStatus('Connecting...');
-      ws.current = new WebSocket('wss://autoaudit-ai-4qqg.onrender.com/ws/audit-logs');
+      ws.current = new WebSocket('wss://autoaudit-ai-0kv4.onrender.com/ws/audit-logs');
       
       ws.current.onopen = () => {
         setWsStatus('Connected');
@@ -44,7 +44,7 @@ export default function Home() {
         if (data.status === 'completed') {
           setIsScanning(false);
           if (data.report_id) {
-            setReportUrl(`https://autoaudit-ai-4qqg.onrender.com/download-report/${data.report_id}`);
+            setReportUrl(`https://autoaudit-ai-0kv4.onrender.com/download-report/${data.report_id}`);
           }
         }
       };
