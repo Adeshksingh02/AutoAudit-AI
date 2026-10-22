@@ -6,3 +6,4 @@ playwright
 pydantic
 python-dotenv
 httpx
+Pillow
