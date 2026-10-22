@@ -12,8 +12,11 @@ class CrawlerAgent:
             await send_log("Crawler", "active", f"Launching headless browser for {self.start_url}...")
         
         async with async_playwright() as p:
-            # Headless browser open kar rahe hain
-            browser = await p.chromium.launch(headless=True)
+            # Headless browser open kar rahe hain with cloud-safe arguments
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+            )
             page = await browser.new_page()
             
             try:
