@@ -1,7 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 motor
 google-generativeai
 playwright
-python-dotenv
 pydantic
+python-dotenv
+httpx
